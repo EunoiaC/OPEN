@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <title>OPEN</title>
+  </head>
+  <body>
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+    <div id="panel">
+      <h1><span id="panel-country-name"></span> <span style="color: slategray" id="panel-country-code"></span></h1>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="inequalities">Inequalities</button>
+        <button class="tab-btn" data-tab="equalities">Equalities</button>
+      </div>
+      <div class="tab-content active" id="inequalities">
+
+      </div>
+      <div class="tab-content" id="equalities">
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
