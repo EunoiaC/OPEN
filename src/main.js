@@ -13,6 +13,7 @@ async function readJsonFile(path) {
     }
 }
 
+
 const countryData = await readJsonFile("processed_gender_stats.json");
 console.log(countryData);
 
