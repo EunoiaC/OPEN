@@ -190,7 +190,12 @@ function createCountryLayer(data, offset = 0) {
                             // check if value is a string or object
                             if (typeof value === "string") {
 
-                                const [year, raw] = value.split(':');
+                                let [year, raw] = value.split(':');
+                                // if the raw value is a whole number, format it with commas
+                                if (Number.isInteger(parseFloat(raw))) {
+                                    raw = parseFloat(raw).toLocaleString();
+                                }
+
                                 const div = document.createElement('div');
                                 div.className = 'item-card';
                                 div.innerHTML = `
@@ -208,7 +213,11 @@ function createCountryLayer(data, offset = 0) {
                                 const groups = Object.keys(value);
                                 if (groups.length < 2) {
                                     // single subgroup — treat like a string
-                                    const [year, raw] = Object.values(value)[0].split(':');
+                                    let [year, raw] = Object.values(value)[0].split(':');
+                                    // if the raw value is a whole number, format it with commas
+                                    if (Number.isInteger(parseFloat(raw))) {
+                                        raw = parseFloat(raw).toLocaleString();
+                                    }
                                     const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
@@ -227,7 +236,11 @@ function createCountryLayer(data, offset = 0) {
                                     const options = groups
                                         .map(key => `<option value="${key}">${key}</option>`)
                                         .join('');
-                                    const [initialYear, initialRaw] = value[groups[0]].split(':');
+                                    let [initialYear, initialRaw] = value[groups[0]].split(':');
+                                    // if the raw value is a whole number, format it with commas
+                                    if (Number.isInteger(parseFloat(initialRaw))) {
+                                        initialRaw = parseFloat(initialRaw).toLocaleString();
+                                    }
                                     const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
@@ -247,7 +260,11 @@ function createCountryLayer(data, offset = 0) {
                                     const valueEl = div.querySelector('.stat-value');
                                     const tip = div.querySelector('i');
                                     select.addEventListener('change', () => {
-                                        const [year, raw] = value[select.value].split(':');
+                                        let [year, raw] = value[select.value].split(':');
+                                        // if the raw value is a whole number, format it with commas
+                                        if (Number.isInteger(parseFloat(raw))) {
+                                            raw = parseFloat(raw).toLocaleString();
+                                        }
                                         valueEl.textContent = raw;
                                         tip.textContent = `Data from ${year}`;
                                     });
