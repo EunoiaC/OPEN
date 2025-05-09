@@ -1,5 +1,3 @@
-import "path";
-
 async function readJsonFile(path) {
     try {
         const response = await fetch(path);
@@ -13,9 +11,8 @@ async function readJsonFile(path) {
     }
 }
 
-
 const countryData = await readJsonFile("processed_gender_stats.json");
-console.log(countryData);
+const seriesCategories = await readJsonFile("full_categorized_series.json");
 
 const map = L.map('map', {
     center: [20, 0],
@@ -69,30 +66,204 @@ function createCountryLayer(data, offset = 0) {
 
                     // get the json data for the current country using the code as the key (processed_gender_stats.json)
                     const data = countryData[feature.properties.ISO_A3];
+                    if (!data) {
+                        countryCode.innerText = "No data";
+                        const inequalitiesView = document.getElementById('inequalities');
+                        const equalitiesView = document.getElementById('equalities');
+                        inequalitiesView.innerHTML = "";
+                        equalitiesView.innerHTML = "";
+                        return;
+                    }
+
+                    console.log(data);
 
                     let equalities = [];
                     let inequalities = [];
 
                     // get all the keys in data that have "(1=yes; 0=no)" in them
                     let seriesNames = countryData["series_names"];
-                    for (let i = 0; i < seriesNames.length; i++) {
-                        if (seriesNames[i].includes("(1=yes; 0=no)")) {
-                            let value = data[seriesNames[i]];
-                            // value is stored as "year: value", need to separate them
-                            let year = value.split(":")[0];
-                            value = value.split(":")[1];
-                            // convert value to a number
-                            value = parseFloat(value);
-                            // check if value is 1 or 0
-                            if (value === 1) {
-                                equalities.push(seriesNames[i]);
-                            } else if (value === 0) {
-                                inequalities.push(seriesNames[i]);
+                    seriesNames
+                        .filter(n => n.includes("(1=yes; 0=no)"))
+                        .forEach(name => {
+                            const [year, raw] = data[name].split(":");
+                            const value = parseFloat(raw);
+                            const text = name.replace(" (1=yes; 0=no)", "");
+                            if (value === 1) equalities.push({ text, year });
+                            else if (value === 0) inequalities.push({ text, year });
+                        });
+
+                    // now render the equalities and inequalities in the panel
+                    const inequalitiesView = document.getElementById('inequalities');
+                    const equalitiesView = document.getElementById('equalities');
+                    inequalitiesView.innerHTML = "";
+                    equalitiesView.innerHTML = "";
+
+                    equalities.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = "item-card equality";
+                        div.innerHTML = `
+                        <p>
+                          <span>${item.text}? <strong>YES</strong></span>
+                          <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
+                        </p>
+                        `;
+                        equalitiesView.appendChild(div);
+                    });
+
+                    inequalities.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = "item-card inequality";
+                        div.innerHTML = `
+                        <p>
+                          <span>${item.text}? <strong>NO</strong></span>
+                          <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
+                        </p>
+                        `;
+                        inequalitiesView.appendChild(div);
+                    });
+
+                    // check if equalities and inequalities are empty, and set the text to "no data" for each
+                    if (equalities.length === 0 && inequalities.length === 0) {
+                        let div = document.createElement('div');
+                        div.className = "item-card no-data";
+                        div.innerHTML = `
+                        <p>
+                          <span>No data</span>
+                        </p>
+                        `;
+                        equalitiesView.appendChild(div);
+                        div = document.createElement('div');
+                        div.className = "item-card no-data";
+                        div.innerHTML = `
+                        <p>
+                          <span>No data</span>
+                        </p>
+                        `;
+                        inequalitiesView.appendChild(div);
+                    } else if (equalities.length === 0) {
+                        let div = document.createElement('div');
+                        div.className = "item-card no-data";
+                        div.innerHTML = `
+                        <p>
+                          <span>None</span>
+                        </p>
+                        `;
+                        equalitiesView.appendChild(div);
+                    } else if (inequalities.length === 0) {
+                        let div = document.createElement('div');
+                        div.className = "item-card no-data";
+                        div.innerHTML = `
+                        <p>
+                          <span>None</span>
+                        </p>
+                        `;
+                        inequalitiesView.appendChild(div);
+                    }
+
+                    function formatItemLabel(item) {
+                        let count = 0;
+                        return item.replace(/\([^)]*\)/g, match => {
+                            const cls = count === 0
+                                ? 'underline'
+                                : count === 1
+                                    ? 'highlight'
+                                    : '';
+                            count++;
+                            return `<span class="${cls}">${match}</span>`;
+                        });
+                    }
+
+                    function renderFromCategory(catName, viewId) {
+                        const series = seriesCategories[catName];
+                        const view = document.getElementById(viewId);
+                        view.innerHTML = "";
+
+                        for (const item of series) {
+                            let value = data[item];
+                            if (value === "") continue;
+                            const unitMatch = item.match(/\(([^)]*)\)/);
+                            const unit = unitMatch ? unitMatch[1] : '';
+                            const textWithoutUnit = item.replace(/\s*\([^)]*\)/, '');
+                            const formattedLabel = textWithoutUnit.replace(/\([^)]*\)/g,
+                                match => `<span class="highlight">${match}</span>`
+                            );
+                            // check if value is a string or object
+                            if (typeof value === "string") {
+
+                                const [year, raw] = value.split(':');
+                                const div = document.createElement('div');
+                                div.className = 'item-card';
+                                div.innerHTML = `
+                                  <span class="stat-label">${formattedLabel}</span>
+                                  <span class="unit">${unit}</span>
+                                  <div class="stat-content stacked">
+                                    <span class="stat-value">${raw}</span>
+                                  </div>
+                                  <div class="stat-footer">
+                                    <i>Data from ${year}</i>
+                                  </div>
+                                `;
+                                view.appendChild(div);
+                            } else {
+                                const groups = Object.keys(value);
+                                if (groups.length < 2) {
+                                    // single subgroup — treat like a string
+                                    const [year, raw] = Object.values(value)[0].split(':');
+                                    const div = document.createElement('div');
+                                    div.className = 'item-card';
+                                    div.innerHTML = `
+                                        <span class="stat-label">${textWithoutUnit}</span>
+                                        <span class="unit">${unit}</span>
+                                        <div class="stat-content stacked">
+                                          <span class="stat-value">${raw}</span>
+                                        </div>
+                                        <div class="stat-footer">
+                                            <i>Data from ${year}</i>
+                                        </div>
+                                      `;
+                                    view.appendChild(div);
+                                } else {
+                                    // multiple — render select
+                                    const options = groups
+                                        .map(key => `<option value="${key}">${key}</option>`)
+                                        .join('');
+                                    const [initialYear, initialRaw] = value[groups[0]].split(':');
+                                    const div = document.createElement('div');
+                                    div.className = 'item-card';
+                                    div.innerHTML = `
+                                      <span class="stat-label">${textWithoutUnit}</span>
+                                      <span class="unit">${unit}</span>
+                                      <div class="stat-wrapper">
+                                        <div class="stat-content stacked">
+                                          <span class="stat-value">${initialRaw}</span>
+                                        </div>
+                                        <select class="poll-group-select">${options}</select>
+                                      </div>
+                                      <div class="stat-footer">
+                                        <i>Data from ${initialYear}</i>
+                                      </div>
+                                    `;
+                                    const select = div.querySelector('.poll-group-select');
+                                    const valueEl = div.querySelector('.stat-value');
+                                    const tip = div.querySelector('i');
+                                    select.addEventListener('change', () => {
+                                        const [year, raw] = value[select.value].split(':');
+                                        valueEl.textContent = raw;
+                                        tip.textContent = `Data from ${year}`;
+                                    });
+                                    view.appendChild(div);
+                                }
                             }
                         }
                     }
-
-                    // now render the equalities and inequalities in the panel
+                    renderFromCategory("Jobs & Work", 'jobsWorkContent');
+                    renderFromCategory("Income & Financial Security", 'incomeFinancialContent');
+                    renderFromCategory("Health & Well-being", 'healthContent');
+                    renderFromCategory("Education", 'educationContent');
+                    renderFromCategory("Legal Rights & Gender Equality", 'legalRightsContent');
+                    renderFromCategory("Household & Family Dynamics", 'householdContent');
+                    renderFromCategory("Attitudes & Beliefs (Polls)", 'attitudesContent');
+                    renderFromCategory("Digital Access & Tech Use", 'digitalAccessContent');
                 }
             });
         },
