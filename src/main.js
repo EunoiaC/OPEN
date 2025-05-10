@@ -206,6 +206,98 @@ function createCountryLayer(data, offset = 0) {
                         return "stat-none";
                     }
 
+                    function renderHeatMap(catName, pollGroup) {
+                        // pollGroup = 1 means only one group
+                        // pollGroup = "..." means a specific group
+                        // pollGroup = null means regular data
+                        // get the values for each country
+                        const values = {};
+                        for (const [key, value] of Object.entries(countryData)) {
+                            if (key === "series_names") continue;
+                            if (pollGroup === 1) {
+                                let poll = value[catName];
+                                if (poll==="") continue;
+                                // get the only kv pair in the object
+                                const [group, val] = Object.entries(poll)[0];
+                                // remove the year from the value
+                                const [year, raw] = val.split(':');
+                                values[key] = parseFloat(raw);
+                            } else if (pollGroup !== null) { // specific group
+                                let poll = value[catName];
+                                if (poll==="") continue;
+                                let val = poll[pollGroup];
+                                if (val==="") continue;
+                                const [year, raw] = val.split(':');
+                                values[key] = parseFloat(raw);
+                            } else { // regular data
+                                if (value[catName] === "") continue;
+                                const [year, raw] = value[catName].split(':');
+                                values[key] = parseFloat(raw);
+                            }
+                        }
+
+                        const allValues = Object.values(values);
+                        if (allValues.length === 0) return;
+
+                        const min = Math.min(...allValues);
+                        const max = Math.max(...allValues);
+
+                        let legendTitle = catName;
+                        if (pollGroup !== null && pollGroup !== 1) {
+                            legendTitle += `(${pollGroup})`;
+                        }
+
+                        const legend = document.getElementById('legend');
+                        legend.innerHTML = `<b>${legendTitle}</b><br>`;
+
+                        const steps = 6;
+                        for (let i = 0; i <= steps; i++) {
+                            const norm = i / steps;
+                            const val = min + norm * (max - min);
+                            const color = getHeatColor(norm);
+                            legend.innerHTML += `
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <div style="width: 20px; height: 12px; background: ${color}; margin-right: 5px;"></div>
+                                    ${val.toFixed(1)}
+                                </div>
+                            `;
+                        }
+
+                        function getHeatColor(norm) {
+                            // norm ∈ [0,1], map 0→blue (240°) to 1→red (0°)
+                            const hue = 240 - 240 * norm;
+                            return `hsl(${hue}, 70%, 50%)`;
+                        }
+
+                        map.eachLayer(layer => {
+                            if (!layer.feature) return;
+                            const code = layer.feature.properties.ISO_A3;
+                            const name = layer.feature.properties.ADMIN || layer.feature.properties.name;
+                            const val = values[code];
+                            if (val == null) {
+                                layer.setStyle({ fillColor: '#ccc' });
+                                // on hover show name and "No data"
+                                layer.bindTooltip(name + ": No data", {
+                                    sticky: true,
+                                    direction: 'auto'
+                                });
+                            } else {
+                                const norm = (val - min) / (max - min);
+                                layer.setStyle({
+                                    fillColor: getHeatColor(norm),
+                                    weight: 1,
+                                    color: 'white',
+                                    fillOpacity: 0.7
+                                });
+                                // on hover show name and value
+                                layer.bindTooltip(name + ": " + val.toFixed(1), {
+                                    sticky: true,
+                                    direction: 'auto'
+                                });
+                            }
+                        });
+                    }
+
                     function renderFromCategory(catName, viewId) {
                         const series = seriesCategories[catName];
                         const view = document.getElementById(viewId);
@@ -222,6 +314,8 @@ function createCountryLayer(data, offset = 0) {
                                 match => `<span class="highlight">${match}</span>`
                             );
                             // check if value is a string or object
+                            let div = document.createElement('div');
+                            // add onclick event to div
                             if (typeof value === "string") {
                                 let [year, raw] = value.split(':');
                                 // if the raw value is a whole number, format it with commas
@@ -232,7 +326,6 @@ function createCountryLayer(data, offset = 0) {
                                     raw = raw.toLocaleString();
                                 }
 
-                                const div = document.createElement('div');
                                 div.className = 'item-card';
                                 div.innerHTML = `
                                   <span class="stat-label">${formattedLabel}</span>
@@ -244,6 +337,9 @@ function createCountryLayer(data, offset = 0) {
                                     <i>Data from ${year}</i>
                                   </div>
                                 `;
+                                div.onclick = function () {
+                                    renderHeatMap(item, null);
+                                }
                                 view.appendChild(div);
                             } else {
                                 const groups = Object.keys(value);
@@ -257,7 +353,6 @@ function createCountryLayer(data, offset = 0) {
                                     if (Number.isInteger(raw)) {
                                         raw = raw.toLocaleString();
                                     }
-                                    const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
                                         <span class="stat-label">${formattedLabel}</span>
@@ -269,6 +364,9 @@ function createCountryLayer(data, offset = 0) {
                                             <i>Data from ${year}</i>
                                         </div>
                                       `;
+                                    div.onclick = function () {
+                                        renderHeatMap(item, 1);
+                                    }
                                     view.appendChild(div);
                                 } else {
                                     // multiple — render select
@@ -283,7 +381,6 @@ function createCountryLayer(data, offset = 0) {
                                     if (Number.isInteger(initialRaw)) {
                                         initialRaw = initialRaw.toLocaleString();
                                     }
-                                    const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
                                       <span class="stat-label">${formattedLabel}</span>
@@ -316,7 +413,13 @@ function createCountryLayer(data, offset = 0) {
                                         }
                                         valueEl.textContent = raw;
                                         tip.textContent = `Data from ${year}`;
+
                                     });
+                                    div.onclick = function () {
+                                        // get the selected option value
+                                        const selectedValue = select.value;
+                                        renderHeatMap(item, selectedValue);
+                                    }
                                     view.appendChild(div);
                                 }
                             }
