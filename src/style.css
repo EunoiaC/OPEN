@@ -288,7 +288,7 @@
     text-decoration: underline;
 }
 .highlight {
-    background-color: #ffe6e6;
+    background-color: #fcf7c2;
     padding: 0 2px;
     border-radius: 2px;
 }
@@ -297,6 +297,22 @@
     display: flex;
     justify-content: space-between;
     margin-top: 0.5em;
+}
+
+.stat-good {
+    background-color: #d1e7dd; /* light green */
+}
+
+.stat-ok {
+    background-color: #fff3cd; /* light yellow */
+}
+
+.stat-bad {
+    background-color: #f8d7da; /* light red */
+}
+
+.stat-none {
+
 }
 
 .unit {

@@ -11,8 +11,9 @@ async function readJsonFile(path) {
     }
 }
 
-const countryData = await readJsonFile("processed_gender_stats.json");
+const countryData = await readJsonFile("processed_stats.json");
 const seriesCategories = await readJsonFile("full_categorized_series.json");
+const seriesBounds = await readJsonFile("full_bounded_categorized_series.json");
 
 const map = L.map('map', {
     center: [20, 0],
@@ -64,7 +65,7 @@ function createCountryLayer(data, offset = 0) {
                         countryCode.innerText = "(" + feature.properties.ISO_A3 + ")";
                     else countryCode.innerText = "";
 
-                    // get the json data for the current country using the code as the key (processed_gender_stats.json)
+                    // get the json data for the current country using the code as the key
                     const data = countryData[feature.properties.ISO_A3];
                     if (!data) {
                         countryCode.innerText = "No data";
@@ -72,92 +73,90 @@ function createCountryLayer(data, offset = 0) {
                         const equalitiesView = document.getElementById('equalities');
                         inequalitiesView.innerHTML = "";
                         equalitiesView.innerHTML = "";
-                        return;
-                    }
+                    } else {
 
-                    console.log(data);
+                        let equalities = [];
+                        let inequalities = [];
 
-                    let equalities = [];
-                    let inequalities = [];
+                        // get all the keys in data that have "(1=yes; 0=no)" in them
+                        let seriesNames = countryData["series_names"];
+                        seriesNames
+                            .filter(n => n.includes("(1=yes; 0=no)"))
+                            .forEach(name => {
+                                const [year, raw] = data[name].split(":");
+                                const value = parseFloat(raw);
+                                const text = name.replace(" (1=yes; 0=no)", "");
+                                if (value === 1) equalities.push({text, year});
+                                else if (value === 0) inequalities.push({text, year});
+                            });
 
-                    // get all the keys in data that have "(1=yes; 0=no)" in them
-                    let seriesNames = countryData["series_names"];
-                    seriesNames
-                        .filter(n => n.includes("(1=yes; 0=no)"))
-                        .forEach(name => {
-                            const [year, raw] = data[name].split(":");
-                            const value = parseFloat(raw);
-                            const text = name.replace(" (1=yes; 0=no)", "");
-                            if (value === 1) equalities.push({ text, year });
-                            else if (value === 0) inequalities.push({ text, year });
+                        // now render the equalities and inequalities in the panel
+                        const inequalitiesView = document.getElementById('inequalities');
+                        const equalitiesView = document.getElementById('equalities');
+                        inequalitiesView.innerHTML = "";
+                        equalitiesView.innerHTML = "";
+
+                        equalities.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = "item-card equality";
+                            div.innerHTML = `
+                            <p>
+                              <span>${item.text}? <strong>YES</strong></span>
+                              <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
+                            </p>
+                            `;
+                            equalitiesView.appendChild(div);
                         });
 
-                    // now render the equalities and inequalities in the panel
-                    const inequalitiesView = document.getElementById('inequalities');
-                    const equalitiesView = document.getElementById('equalities');
-                    inequalitiesView.innerHTML = "";
-                    equalitiesView.innerHTML = "";
+                        inequalities.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = "item-card inequality";
+                            div.innerHTML = `
+                            <p>
+                              <span>${item.text}? <strong>NO</strong></span>
+                              <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
+                            </p>
+                            `;
+                            inequalitiesView.appendChild(div);
+                        });
 
-                    equalities.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = "item-card equality";
-                        div.innerHTML = `
-                        <p>
-                          <span>${item.text}? <strong>YES</strong></span>
-                          <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
-                        </p>
-                        `;
-                        equalitiesView.appendChild(div);
-                    });
-
-                    inequalities.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = "item-card inequality";
-                        div.innerHTML = `
-                        <p>
-                          <span>${item.text}? <strong>NO</strong></span>
-                          <i data-tooltip="Data from ${item.year}" class="bi bi-info-circle"></i>
-                        </p>
-                        `;
-                        inequalitiesView.appendChild(div);
-                    });
-
-                    // check if equalities and inequalities are empty, and set the text to "no data" for each
-                    if (equalities.length === 0 && inequalities.length === 0) {
-                        let div = document.createElement('div');
-                        div.className = "item-card no-data";
-                        div.innerHTML = `
-                        <p>
-                          <span>No data</span>
-                        </p>
-                        `;
-                        equalitiesView.appendChild(div);
-                        div = document.createElement('div');
-                        div.className = "item-card no-data";
-                        div.innerHTML = `
-                        <p>
-                          <span>No data</span>
-                        </p>
-                        `;
-                        inequalitiesView.appendChild(div);
-                    } else if (equalities.length === 0) {
-                        let div = document.createElement('div');
-                        div.className = "item-card no-data";
-                        div.innerHTML = `
-                        <p>
-                          <span>None</span>
-                        </p>
-                        `;
-                        equalitiesView.appendChild(div);
-                    } else if (inequalities.length === 0) {
-                        let div = document.createElement('div');
-                        div.className = "item-card no-data";
-                        div.innerHTML = `
-                        <p>
-                          <span>None</span>
-                        </p>
-                        `;
-                        inequalitiesView.appendChild(div);
+                        // check if equalities and inequalities are empty, and set the text to "no data" for each
+                        if (equalities.length === 0 && inequalities.length === 0) {
+                            let div = document.createElement('div');
+                            div.className = "item-card no-data";
+                            div.innerHTML = `
+                            <p>
+                              <span>No data</span>
+                            </p>
+                            `;
+                            equalitiesView.appendChild(div);
+                            div = document.createElement('div');
+                            div.className = "item-card no-data";
+                            div.innerHTML = `
+                            <p>
+                              <span>No data</span>
+                            </p>
+                            `;
+                            inequalitiesView.appendChild(div);
+                        } else if (equalities.length === 0) {
+                            let div = document.createElement('div');
+                            div.className = "item-card no-data";
+                            div.innerHTML = `
+                            <p>
+                              <span>None</span>
+                            </p>
+                            `;
+                            equalitiesView.appendChild(div);
+                        } else if (inequalities.length === 0) {
+                            let div = document.createElement('div');
+                            div.className = "item-card no-data";
+                            div.innerHTML = `
+                            <p>
+                              <span>None</span>
+                            </p>
+                            `;
+                            inequalitiesView.appendChild(div);
+                        }
                     }
 
                     function formatItemLabel(item) {
@@ -173,10 +172,45 @@ function createCountryLayer(data, offset = 0) {
                         });
                     }
 
+                    function getStatusFromBounds(catName, item, value) {
+                        const items = seriesBounds[catName];
+                        for (const i of items) {
+                            if (i.indicator === item) {
+                                let bounds = i.bounds;
+                                // check if bounds is empty brackets
+                                if (Object.keys(bounds).length === 0) return "stat-none";
+                                let good = bounds.good;
+                                let bad = bounds.bad;
+                                let ok = bounds.ok;
+                                if (good.max === null) {
+                                    // higher values mean better
+                                    if (value > good.min) {
+                                        return "stat-good";
+                                    } else if (value > ok.min) {
+                                        return "stat-ok";
+                                    } else {
+                                        return "stat-bad";
+                                    }
+                                } else {
+                                    // lower values mean better
+                                    if (value > bad.min) {
+                                        return "stat-bad";
+                                    } else if (value > ok.min) {
+                                        return "stat-ok";
+                                    } else {
+                                        return "stat-good";
+                                    }
+                                }
+                            }
+                        }
+                        return "stat-none";
+                    }
+
                     function renderFromCategory(catName, viewId) {
                         const series = seriesCategories[catName];
                         const view = document.getElementById(viewId);
                         view.innerHTML = "";
+                        if (!data) return; // just clear the views
 
                         for (const item of series) {
                             let value = data[item];
@@ -189,11 +223,13 @@ function createCountryLayer(data, offset = 0) {
                             );
                             // check if value is a string or object
                             if (typeof value === "string") {
-
                                 let [year, raw] = value.split(':');
                                 // if the raw value is a whole number, format it with commas
-                                if (Number.isInteger(parseFloat(raw))) {
-                                    raw = parseFloat(raw).toLocaleString();
+                                raw = parseFloat(raw);
+                                // check where the raw lies in the bounds
+                                let valueStatus = getStatusFromBounds(catName, item, raw);
+                                if (Number.isInteger(raw)) {
+                                    raw = raw.toLocaleString();
                                 }
 
                                 const div = document.createElement('div');
@@ -201,7 +237,7 @@ function createCountryLayer(data, offset = 0) {
                                 div.innerHTML = `
                                   <span class="stat-label">${formattedLabel}</span>
                                   <span class="unit">${unit}</span>
-                                  <div class="stat-content stacked">
+                                  <div class="stat-content stacked ${valueStatus}">
                                     <span class="stat-value">${raw}</span>
                                   </div>
                                   <div class="stat-footer">
@@ -215,15 +251,18 @@ function createCountryLayer(data, offset = 0) {
                                     // single subgroup — treat like a string
                                     let [year, raw] = Object.values(value)[0].split(':');
                                     // if the raw value is a whole number, format it with commas
-                                    if (Number.isInteger(parseFloat(raw))) {
-                                        raw = parseFloat(raw).toLocaleString();
+                                    raw = parseFloat(raw);
+                                    // check where the raw lies in the bounds
+                                    let valueStatus = getStatusFromBounds(catName, item, raw);
+                                    if (Number.isInteger(raw)) {
+                                        raw = raw.toLocaleString();
                                     }
                                     const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
-                                        <span class="stat-label">${textWithoutUnit}</span>
+                                        <span class="stat-label">${formattedLabel}</span>
                                         <span class="unit">${unit}</span>
-                                        <div class="stat-content stacked">
+                                        <div class="stat-content stacked ${valueStatus}">
                                           <span class="stat-value">${raw}</span>
                                         </div>
                                         <div class="stat-footer">
@@ -238,16 +277,19 @@ function createCountryLayer(data, offset = 0) {
                                         .join('');
                                     let [initialYear, initialRaw] = value[groups[0]].split(':');
                                     // if the raw value is a whole number, format it with commas
-                                    if (Number.isInteger(parseFloat(initialRaw))) {
-                                        initialRaw = parseFloat(initialRaw).toLocaleString();
+                                    initialRaw = parseFloat(initialRaw);
+                                    // check where the raw lies in the bounds
+                                    let valueStatus = getStatusFromBounds(catName, item, initialRaw);
+                                    if (Number.isInteger(initialRaw)) {
+                                        initialRaw = initialRaw.toLocaleString();
                                     }
                                     const div = document.createElement('div');
                                     div.className = 'item-card';
                                     div.innerHTML = `
-                                      <span class="stat-label">${textWithoutUnit}</span>
+                                      <span class="stat-label">${formattedLabel}</span>
                                       <span class="unit">${unit}</span>
                                       <div class="stat-wrapper">
-                                        <div class="stat-content stacked">
+                                        <div class="stat-content stacked ${valueStatus}">
                                           <span class="stat-value">${initialRaw}</span>
                                         </div>
                                         <select class="poll-group-select">${options}</select>
@@ -258,12 +300,19 @@ function createCountryLayer(data, offset = 0) {
                                     `;
                                     const select = div.querySelector('.poll-group-select');
                                     const valueEl = div.querySelector('.stat-value');
+                                    const contentEl = div.querySelector('.stat-content');
                                     const tip = div.querySelector('i');
                                     select.addEventListener('change', () => {
                                         let [year, raw] = value[select.value].split(':');
                                         // if the raw value is a whole number, format it with commas
-                                        if (Number.isInteger(parseFloat(raw))) {
-                                            raw = parseFloat(raw).toLocaleString();
+                                        raw = parseFloat(raw);
+                                        // make sure stat-content only has stat-content and stacked
+                                        contentEl.className = "stat-content stacked";
+                                        // check where the raw lies in the bounds
+                                        let valueStatus = getStatusFromBounds(catName, item, raw);
+                                        contentEl.classList.add(valueStatus);
+                                        if (Number.isInteger(raw)) {
+                                            raw = raw.toLocaleString();
                                         }
                                         valueEl.textContent = raw;
                                         tip.textContent = `Data from ${year}`;

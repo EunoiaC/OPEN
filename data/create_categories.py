@@ -6,7 +6,7 @@ def is_yes_no(series):
     return "(1=yes; 0=no)" in series
 
 import json
-input_path = "/Users/aadiyadav/Documents/GitHub/OPEN/public/processed_gender_stats.json"
+input_path = "/Users/aadiyadav/Documents/GitHub/OPEN/data/processed_stats.json"
 with open(input_path, "r") as f:
     data = json.load(f)
     series_names = data["series_names"]
@@ -51,8 +51,6 @@ for series in series_names:
 final_categories = {k: v for k, v in extended_categories.items() if v}
 
 # Save the completed categorization
-final_output_path = "/Users/aadiyadav/Documents/GitHub/OPEN/public/full_categorized_series.json"
+final_output_path = "/Users/aadiyadav/Documents/GitHub/OPEN/data/full_categorized_series.json"
 with open(final_output_path, "w") as f:
     json.dump(final_categories, f, indent=2)
-
-final_output_path
