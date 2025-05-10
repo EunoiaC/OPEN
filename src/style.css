@@ -315,6 +315,11 @@
 
 }
 
+.bi-map:hover {
+    color: #007bff;
+    cursor: pointer;
+}
+
 .unit {
     font-size: 0.85em;
     color: #777;

@@ -335,9 +335,12 @@ function createCountryLayer(data, offset = 0) {
                                   </div>
                                   <div class="stat-footer">
                                     <i>Data from ${year}</i>
+                                    <i class="bi bi-map"></i>
                                   </div>
                                 `;
-                                div.onclick = function () {
+                                // add onclick to the map
+                                const mapIcon = div.querySelector('i.bi-map');
+                                mapIcon.onclick = function () {
                                     renderHeatMap(item, null);
                                 }
                                 view.appendChild(div);
@@ -362,9 +365,12 @@ function createCountryLayer(data, offset = 0) {
                                         </div>
                                         <div class="stat-footer">
                                             <i>Data from ${year}</i>
+                                            <i class="bi bi-map"></i>
                                         </div>
                                       `;
-                                    div.onclick = function () {
+                                    // add onclick to the map
+                                    const mapIcon = div.querySelector('i.bi-map');
+                                    mapIcon.onclick = function () {
                                         renderHeatMap(item, 1);
                                     }
                                     view.appendChild(div);
@@ -393,12 +399,14 @@ function createCountryLayer(data, offset = 0) {
                                       </div>
                                       <div class="stat-footer">
                                         <i>Data from ${initialYear}</i>
+                                        <i class="bi bi-map"></i>
                                       </div>
                                     `;
                                     const select = div.querySelector('.poll-group-select');
                                     const valueEl = div.querySelector('.stat-value');
                                     const contentEl = div.querySelector('.stat-content');
                                     const tip = div.querySelector('i');
+                                    const mapIcon = div.querySelector('.bi-map');
                                     select.addEventListener('change', () => {
                                         let [year, raw] = value[select.value].split(':');
                                         // if the raw value is a whole number, format it with commas
@@ -415,7 +423,7 @@ function createCountryLayer(data, offset = 0) {
                                         tip.textContent = `Data from ${year}`;
 
                                     });
-                                    div.onclick = function () {
+                                    mapIcon.onclick = function () {
                                         // get the selected option value
                                         const selectedValue = select.value;
                                         renderHeatMap(item, selectedValue);
